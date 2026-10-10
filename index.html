@@ -70,7 +70,7 @@ button{font:inherit;color:inherit;cursor:pointer}.control{background:transparent
 const SONGS = [
   {
     name: "Nerver gonna give you up",
-    artist: "Rick",
+    artist: "Rock",
     audio: "song1.mp3"
   },
   {
@@ -123,13 +123,13 @@ function loadSong(index,autoplay=false){
   document.getElementById('currentTime').textContent='0:00';
   document.getElementById('duration').textContent='0:00';
   renderPlaylist();
-  if(autoplay)audio.play().catch(()=>{});
+  if(autoplay)audio.play().catch(()=>{artistEl.textContent='無法開始播放，請再點一次播放，並確認音樂檔案可公開存取。';});
   else playBtn.textContent='▶';
 }
 playBtn.addEventListener('click',()=>{
   if(!SONGS.length)return;
   if(!audio.src)loadSong(current,false);
-  if(audio.paused)audio.play().catch(()=>{});else audio.pause();
+  if(audio.paused)audio.play().catch(()=>{artistEl.textContent='無法開始播放，請檢查音樂網址，或再點一次播放。';});else audio.pause();
 });
 document.getElementById('prev').addEventListener('click',()=>loadSong(current-1,true));
 document.getElementById('next').addEventListener('click',()=>loadSong(current+1,true));
@@ -137,6 +137,16 @@ audio.addEventListener('play',()=>playBtn.textContent='❚❚');
 audio.addEventListener('pause',()=>playBtn.textContent='▶');
 audio.addEventListener('ended',()=>{if(current<SONGS.length-1)loadSong(current+1,true);else{audio.currentTime=0;playBtn.textContent='▶';}});
 audio.addEventListener('loadedmetadata',()=>document.getElementById('duration').textContent=timeText(audio.duration));
+audio.addEventListener('error',()=>{
+  const code=audio.error?.code;
+  const messages={
+    1:'播放已取消。',
+    2:'載入音樂時發生網路錯誤，請確認音樂網址可公開存取。',
+    3:'瀏覽器無法解碼此音樂格式，請嘗試 MP3 或 M4A。',
+    4:'找不到音樂檔案或格式不受支援。請檢查 SONGS 裡的 audio 路徑、檔名大小寫，以及 GitHub Pages 上是否真的有該檔案。'
+  };
+  artistEl.textContent=messages[code]||'音樂載入失敗，請檢查音樂網址與檔案路徑。';
+});
 audio.addEventListener('timeupdate',()=>{
   document.getElementById('currentTime').textContent=timeText(audio.currentTime);
   if(!dragging&&Number.isFinite(audio.duration)&&audio.duration>0)seek.value=audio.currentTime/audio.duration*1000;
