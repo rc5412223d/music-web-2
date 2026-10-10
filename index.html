@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#10111b">
+<title>我的音樂室</title>
+<style>
+:root{color-scheme:dark;--bg:#10111b;--panel:#191b2b;--panel2:#22253a;--text:#f7f7ff;--muted:#a6aac5;--accent:#a99bff;--line:#343751}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0,#30265a 0%,var(--bg) 55%);font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;color:var(--text);display:flex;justify-content:center;align-items:center;padding:20px}
+.app{width:min(100%,560px);background:#171827ed;border:1px solid var(--line);border-radius:28px;padding:25px;box-shadow:0 25px 90px #0006}
+header{display:flex;align-items:center;gap:13px;margin-bottom:24px}
+.logo{height:48px;width:48px;border-radius:16px;background:linear-gradient(135deg,#d2c7ff,#7660e8);color:#17152a;display:grid;place-items:center;font-size:25px}
+h1{font-size:21px;margin:0}.subtitle{color:var(--muted);font-size:13px;margin-top:4px}
+.cover{height:210px;border-radius:22px;background:radial-gradient(circle at 50% 45%,#574b91,#292344 45%,#171827 78%);display:grid;place-items:center;position:relative;overflow:hidden;margin-bottom:24px}
+.cover:before,.cover:after{content:"";position:absolute;width:235px;height:235px;border:1px solid #ffffff20;border-radius:50%}.cover:after{width:175px;height:175px}
+.vinyl{width:120px;height:120px;border-radius:50%;z-index:1;background:repeating-radial-gradient(circle,#151522 0 5px,#29283e 6px 9px);display:grid;place-items:center;box-shadow:0 12px 30px #0006}
+.vinyl span{width:38px;height:38px;border-radius:50%;background:var(--accent);color:#17152a;display:grid;place-items:center}
+.now{text-align:center;margin-bottom:20px}.song-title{font-size:20px;font-weight:750;overflow-wrap:anywhere}.song-artist{font-size:13px;color:var(--muted);margin-top:6px}
+.timeline{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px}input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer}
+.controls{display:flex;align-items:center;justify-content:center;gap:25px;margin:17px 0 24px}
+button{font:inherit;color:inherit;cursor:pointer}.control{background:transparent;border:0;font-size:24px;color:#e2defe;padding:8px}.play{height:62px;width:62px;border:0;border-radius:50%;background:linear-gradient(135deg,#d1c7ff,#8b78ff);color:#17152a;font-size:23px;box-shadow:0 7px 24px #8b78ff40}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin:12px 0}.section-head strong{font-size:15px}.section-head span{font-size:12px;color:var(--muted)}
+.playlist{display:flex;flex-direction:column;gap:8px}.track{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;border:1px solid transparent;background:#ffffff06;cursor:pointer;min-width:0}.track:hover{background:#ffffff0d}.track.active{border-color:#7061ba;background:#a99bff14}
+.track-number{width:32px;height:32px;display:grid;place-items:center;background:#2b2d45;border-radius:10px;color:#d7d0ff;flex-shrink:0;font-size:13px}
+.track-info{min-width:0;flex:1}.track-name{font-size:14px;font-weight:600;overflow-wrap:anywhere}.track-artist{font-size:12px;color:var(--muted);margin-top:3px}
+.track-status{color:var(--accent);font-size:13px;flex-shrink:0}
+.volume{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;margin-top:20px}
+.note{font-size:11px;line-height:1.6;color:#8388a7;text-align:center;margin-top:22px}
+@media(max-width:390px){.app{padding:18px}.cover{height:170px}.controls{gap:17px}}
+</style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <div class="logo">♫</div>
+    <div><h1>我的音樂室</h1><div class="subtitle">選一首歌，開始聆聽</div></div>
+  </header>
+  <div class="cover"><div class="vinyl"><span>♫</span></div></div>
+  <section class="now">
+    <div class="song-title" id="songTitle">選擇一首歌曲</div>
+    <div class="song-artist" id="songArtist">我的音樂收藏</div>
+  </section>
+  <div class="timeline">
+    <span id="currentTime">0:00</span>
+    <input id="seek" type="range" min="0" max="1000" value="0" aria-label="播放進度">
+    <span id="duration">0:00</span>
+  </div>
+  <div class="controls">
+    <button class="control" id="prev" aria-label="上一首" title="上一首">⏮</button>
+    <button class="play" id="play" aria-label="播放或暫停" title="播放">▶</button>
+    <button class="control" id="next" aria-label="下一首" title="下一首">⏭</button>
+  </div>
+  <div class="section-head"><strong>播放清單</strong><span id="count"></span></div>
+  <div class="playlist" id="playlist"></div>
+  <div class="volume"><span>🔊 音量</span><input id="volume" type="range" min="0" max="1" step="0.01" value="0.8"><span id="volumeValue">80%</span></div>
+  <div class="note">音樂由此網站提供。請確認你有權公開分享所使用的音樂檔案。</div>
+  <audio id="audio" preload="metadata"></audio>
+</main>
+<script>
+/*
+  ===== 只需要修改下面的 SONGS 歌曲清單 =====
+  audio: 音樂檔案路徑或完整網址
+  如果 MP3 和 index.html 放在同一個資料夾，寫 "song.mp3"
+  如果放在 music 資料夾，寫 "music/song.mp3"
+  name: 網站上顯示的歌曲名稱
+  artist: 顯示的歌手／作者
+*/
+const SONGS = [
+  {
+    name: "Nerver gonna give you up",
+    artist: "Rick",
+    audio: "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster) - Rick Astley (youtube).mp3"
+  },
+  {
+    name: "第二首歌曲",
+    artist: "歌手名稱",
+    audio: "music/song2.mp3"
+  }
+];
+// ===== 歌曲清單修改到這裡結束 =====
+
+const audio=document.getElementById('audio');
+const titleEl=document.getElementById('songTitle');
+const artistEl=document.getElementById('songArtist');
+const playBtn=document.getElementById('play');
+const seek=document.getElementById('seek');
+const playlistEl=document.getElementById('playlist');
+let current=0, dragging=false;
+
+function timeText(value){
+  if(!Number.isFinite(value)||value<0)return '0:00';
+  value=Math.floor(value);
+  return Math.floor(value/60)+':'+String(value%60).padStart(2,'0');
+}
+function renderPlaylist(){
+  document.getElementById('count').textContent=SONGS.length+' 首歌曲';
+  playlistEl.replaceChildren();
+  SONGS.forEach((song,index)=>{
+    const row=document.createElement('div');
+    row.className='track'+(index===current?' active':'');
+    row.setAttribute('role','button');row.setAttribute('tabindex','0');
+    const number=document.createElement('div');number.className='track-number';number.textContent=String(index+1);
+    const info=document.createElement('div');info.className='track-info';
+    const name=document.createElement('div');name.className='track-name';name.textContent=song.name;
+    const artist=document.createElement('div');artist.className='track-artist';artist.textContent=song.artist||'未知作者';
+    const status=document.createElement('div');status.className='track-status';status.textContent=index===current?'♫':'';
+    info.append(name,artist);row.append(number,info,status);
+    row.addEventListener('click',()=>loadSong(index,true));
+    row.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();loadSong(index,true)}});
+    playlistEl.append(row);
+  });
+}
+function loadSong(index,autoplay=false){
+  if(!SONGS.length)return;
+  current=(index+SONGS.length)%SONGS.length;
+  const song=SONGS[current];
+  audio.src=song.audio;
+  titleEl.textContent=song.name;
+  artistEl.textContent=song.artist||'未知作者';
+  seek.value=0;
+  document.getElementById('currentTime').textContent='0:00';
+  document.getElementById('duration').textContent='0:00';
+  renderPlaylist();
+  if(autoplay)audio.play().catch(()=>{});
+  else playBtn.textContent='▶';
+}
+playBtn.addEventListener('click',()=>{
+  if(!SONGS.length)return;
+  if(!audio.src)loadSong(current,false);
+  if(audio.paused)audio.play().catch(()=>{});else audio.pause();
+});
+document.getElementById('prev').addEventListener('click',()=>loadSong(current-1,true));
+document.getElementById('next').addEventListener('click',()=>loadSong(current+1,true));
+audio.addEventListener('play',()=>playBtn.textContent='❚❚');
+audio.addEventListener('pause',()=>playBtn.textContent='▶');
+audio.addEventListener('ended',()=>{if(current<SONGS.length-1)loadSong(current+1,true);else{audio.currentTime=0;playBtn.textContent='▶';}});
+audio.addEventListener('loadedmetadata',()=>document.getElementById('duration').textContent=timeText(audio.duration));
+audio.addEventListener('timeupdate',()=>{
+  document.getElementById('currentTime').textContent=timeText(audio.currentTime);
+  if(!dragging&&Number.isFinite(audio.duration)&&audio.duration>0)seek.value=audio.currentTime/audio.duration*1000;
+});
+seek.addEventListener('input',()=>{
+  dragging=true;
+  if(Number.isFinite(audio.duration))document.getElementById('currentTime').textContent=timeText(seek.value/1000*audio.duration);
+});
+seek.addEventListener('change',()=>{
+  if(Number.isFinite(audio.duration))audio.currentTime=seek.value/1000*audio.duration;
+  dragging=false;
+});
+document.getElementById('volume').addEventListener('input',e=>{
+  audio.volume=Number(e.target.value);
+  document.getElementById('volumeValue').textContent=Math.round(audio.volume*100)+'%';
+});
+audio.volume=0.8;
+if(SONGS.length)loadSong(0,false);
+else{titleEl.textContent='目前沒有歌曲';artistEl.textContent='請在 HTML 的 SONGS 清單新增歌曲';renderPlaylist();}
+</script>
+</body>
+</html>
